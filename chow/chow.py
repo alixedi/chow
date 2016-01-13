@@ -55,6 +55,8 @@ This little puppy will die if you don't.
 Maybe not, but still if you want in, just say: *Im in*.
 Or if you need help, just type: *help*.'''
 
+ODD = '''Hey! I'm sorry I couldn't pair you up today because odd numbers.'''
+
 
 @respond_to('help', re.IGNORECASE)
 def help(message):
@@ -72,7 +74,7 @@ def im_in(message):
 @respond_to('im out', re.IGNORECASE)
 def im_out(message):
     user = Query()
-    if not USERS.update(user.id == message.body['user']) is None:
+    if not USERS.get(user.id == message.body['user']) is None:
         USERS.remove(user.id == message.body['user'])
     return message.reply(CHICKEN)
 
@@ -89,9 +91,11 @@ def lunch(message):
     users = map(lambda x: x['id'], USERS.all())
     pairs = random_pairs(users)
     for user1, user2 in pairs:
-        tpl = Template(LUNCH)
-        send_invite(user1, user2, tpl)
-        send_invite(user2, user1, tpl)
+        if user2 is None:
+            send_im(user1, ODD)
+        else:
+            send_invite(user1, user2)
+            send_invite(user2, user1)
     # Reset USERS
     USERS.purge()
 
@@ -102,19 +106,29 @@ def debug(message):
     message.reply('Into the logs it went :+1:')
 
 
-@respond_to('gravy @(.*)', re.IGNORECASE)
+@respond_to('gravy (.*)', re.IGNORECASE)
 def gravy(message, username):
     # Get user id, return error if not found
     users = SLACK.users.list().body['members']
     user = filter(lambda x: x['name'] == username, users)
     if len(user) == 0:
-        return message.reply('Sorry. I do not know him/her. /giphy anonymous')
+        return message.reply('Sorry. I do not know him/her.')
+    user = user.pop()
     # Get all reactions for this user
     chow = Query()
-    reactions = map(lambda x: x['reaction'], CHOW.search(chow.user == user))
-    hist = list(Counter(a).iteritems())[:3]
+    reactions = map(lambda x: x['reaction'],
+        CHOWS.search((chow.user == user['id'])
+                   & (chow.reaction != None)
+                   & (chow.reaction != '')
+        )
+    )
+    print reactions
+    if len(reactions) > 2:
+        hist = list(Counter(reactions).iteritems())[:3]
+    else:
+        return message.reply('You need to lunch 3 times to have a gravy going.')
     gravy = map(lambda (x, y): ':%s:: %d' % (x, y), hist)
-    return message.reply(' '.join(gravy))
+    message.reply(' '.join(gravy))
 
 
 def save_reaction():
@@ -123,10 +137,14 @@ def save_reaction():
     return transform
 
 
-def send_invite(user, pair, tpl):
+def send_im(user, im):
     ch = SLACK.im.open(user).body['channel']['id']
-    SLACK.chat.post_message(ch, tpl.substitute(pair=pair),
-        as_user=True, unfurl_media=True)
+    SLACK.chat.post_message(ch, im, as_user=True, unfurl_media=True)
+
+
+def send_invite(user, pair):
+    tpl = Template(LUNCH)
+    send_im(user, tpl.substitute(pair=pair))
     CHOWS.insert(
         {
             'date': str(date.today()),
@@ -140,12 +158,13 @@ def send_invite(user, pair, tpl):
 def get_reaction(user):
     ch = SLACK.im.open(user).body['channel']['id']
     msgs = SLACK.im.history(ch).body['messages']
-    lunch_msgs = filter(lambda x: 'You will be having lunch with' in x, msgs)
+    lunch_msgs = filter(lambda x: 'You will be having lunch with' in x['text'], msgs)
     if len(lunch_msgs) > 0:
-        msg = lunch_msgs.sort(key=lambda x: x['ts']).pop()
-        if 'reaction' in msg:
-            return reaction['name']
-    return ''
+        lunch_msgs.sort(key=lambda x: x['ts'])
+        msg = lunch_msgs.pop()
+        if 'reactions' in msg:
+            return msg['reactions'][0]['name']
+    return 'x'
 
 
 def random_hackernews():

@@ -55,3 +55,8 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# @alixedi - Settings and DB files
+chow/slackbot_settings.py
+chow/chows.json
+chow/users.json
