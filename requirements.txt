@@ -1,5 +1,14 @@
 backports.ssl-match-hostname==3.5.0.1
+cffi==1.4.2
+cryptography==1.2.1
+enum34==1.1.2
+idna==2.0
 importlib==1.0.3
+ipaddress==1.0.16
+ndg-httpsclient==0.4.0
+pyasn1==0.1.9
+pycparser==2.14
+pyOpenSSL==0.15.1
 requests==2.9.1
 six==1.10.0
 slackbot==0.2.4

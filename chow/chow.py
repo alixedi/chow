@@ -82,8 +82,8 @@ def im_out(message):
 @respond_to('lunch', re.IGNORECASE)
 def lunch(message):
     # We shall only respond if this is sent by slackbot
-    #if not message.body['user'] == 'USLACKBOT':
-    #    return message.reply('''/giphy hungry''')
+    if not message.body['user'] == 'USLACKBOT':
+        return message.reply('''/giphy hungry''')
     # Record reactions
     chow = Query()
     CHOWS.update(save_reaction(), chow.reaction == None)
